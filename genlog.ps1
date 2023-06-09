@@ -1,12 +1,15 @@
+# Need admin perms to read docker volumes files
+#if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) { Start-Process powershell.exe "-NoProfile -ExecutionPolicy Bypass -NoExit -File `"$PSCommandPath`" `"$Args`"" -Verb RunAs; exit } $Argv = $Args.Split(" ")
+
 $action = $Args[0]
-$rangemin = $Args[1]
-$rangemax = $Args[2]
-$nblogs = $Args[3]
-$lps = $Args[4]
-$size = $Args[5]
+$rangeMin = $Args[1]
+$rangeMax = $Args[2]
+$logNumber = $Args[3]
+$logPerSecond = $Args[4]
+$logSize = $Args[5]
 $ip = "172.22.39."
-$name = "flg"
-$image = "flg"
+$name = "gwl"
+$image = "gwl"
 $eventApp = "MyApp" # If new App, it will create it
 $volume = "C:\ProgramData\Docker\volumes\logs\_data"
 
@@ -15,7 +18,7 @@ Function usage {
 Usage: .\docker.ps1 <start|stop|restart|create|rm|recreate|run|exec|gen|logs> <rangemin> <rangemax> [<number_of_logs> <logs_per_seconde> <size_of_logs>]
 Example: 
     .\docker.ps1 run 1 20                   Create and start 20 containers
-    .\docker.ps1 gen 1 20 10000 100 100     Generate 10000 logs of 100 bytes at the rate of 100 logs/s 
+    .\docker.ps1 gen 1 20 10000 100 100     Generate 10000 logs of 100 bytes at the rate of 100 logs/s on each container
     .\docker.ps1 logs 1 20                  Wait for the logs to come and report.
     
 Other command:
@@ -34,22 +37,22 @@ If ($actionArray -notcontains $action) {
 
 If ($action -eq "exec") {
     $execCommand = $Args[3]
-    $nblogs = ""
+    $logNumber = ""
 }
 
-If ($rangemax -eq $null) {
-    $rangemax = $rangemin
+If ($rangeMax -eq $null) {
+    $rangeMax = $rangeMin
 }
-If ($rangemin -lt 1 -or $rangemax -lt 1) {
+If ($rangeMin -lt 1 -or $rangeMax -lt 1) {
     Write-Error "Wrong range. Need postive integers"
     usage
 }
-ElseIf ($rangemin -gt $rangemax) {
+ElseIf ($rangeMin -gt $rangeMax) {
     Write-Error "Wrong range. Rangemax should be higher than rangemin"
     usage
 }
-if ($action -eq "gen") {
-    if ($nblogs -lt 1 -and $nblogs -match "^\d+$" -or $lps -lt 1 -and $lps -match "^\d+$"  -or $size -lt 1 -and $size -match "^\d+$") {
+If ($action -eq "gen") {
+    If ($logNumber -lt 1 -or $logPerSecond -lt 1 -or $logSize -lt 1) {
         Write-Error "Wrong number of logs and/or logs per second and/or size. Need postive integers"
         usage
     }
@@ -59,47 +62,47 @@ $logsGenerated = 0
 $realLogsPerSecond = 0
 $totalSizeBytes = 0
 $durationSecs = 0
-function formatDuration($Seconds) {
-    if ($Seconds -lt 60) {
-        return "$Seconds secs"
+
+function formatDuration($seconds) {
+    if ($seconds -lt 60) {
+        return "$seconds secs"
     }
-    elseif ($Seconds -lt 3600) {
-        $Seconds = [math]::Round(($Seconds / 60), 0)
-        return  "$Seconds mins"
+    elseif ($seconds -lt 3600) {
+        $seconds = [math]::Round(($seconds / 60), 0)
+        return  "$seconds mins"
     }
     else {
-        $Seconds = [math]::Round(($Seconds / 3600), 0)
-        return  "$Seconds hours"
+        $seconds = [math]::Round(($seconds / 3600), 0)
+        return  "$seconds hours"
     }
 }
 
-function formatSize($TotalSize) {
-    if ($TotalSize -lt 1024) {
-        return "$TotalSize B"
+function formatSize($totalSize) {
+    if ($totalSize -lt 1024) {
+        return "$totalSize B"
     }
-    elseif ($TotalSize -lt 1048576) {
-        $TotalSize = [math]::Round(($TotalSize / 1024), 0)
-        return "$TotalSize KB"
+    elseif ($totalSize -lt 1048576) {
+        $totalSize = [math]::Round(($totalSize / 1024), 0)
+        return "$totalSize KB"
     }
-    elseif ($TotalSize -lt 1073741824) {
-        $TotalSize = [math]::Round(($TotalSize / 1048576), 0)
-        return "$TotalSize MB"
+    elseif ($totalSize -lt 1073741824) {
+        $totalSize = [math]::Round(($totalSize / 1048576), 0)
+        return "$totalSize MB"
     }
     else {
-        $TotalSize = [math]::Round(($TotalSize / 1073741824), 0)
-        return "$TotalSize GB"
+        $totalSize = [math]::Round(($totalSize / 1073741824), 0)
+        return "$totalSize GB"
     }
 }
 
 If ($action -eq "gen") {
-    Remove-Item -Path "$volume\*" -Force -Recurse -ErrorAction SilentlyContinue
+    Remove-Item -Path "$volume\*" -Force -Recurse
 }
 ElseIf ($action -eq "logs") {
-    while ((Get-ChildItem -Path $volume).Count -ne ($rangemax - $rangemin + 1)) {
+    while ((Get-ChildItem -Path $volume).Count -ne ($rangeMax - $rangeMin + 1)) {
         Write-Host "Waiting for logs... Logs present: " (Get-ChildItem -Path $volume).Count 
         Start-Sleep -Seconds 1
     }
-
     $files = Get-ChildItem -Path $volume -File
     foreach ($file in $files) {
         $content = Get-Content $file.FullName
@@ -115,26 +118,29 @@ ElseIf ($action -eq "logs") {
             }
         }
     }
-    $TotalSize = formatSize($totalSizeBytes)
-    $Duration = formatDuration($durationSecs)
+    $totalSize = formatSize($totalSizeBytes)
+    $duration = formatDuration($durationSecs)
 
     Write-Output "=== FAKE LOG REPORT ===
 Logs generated     $LogsGenerated
-Real Logs/s        $RealLogsPerSecond
-Total size         $TotalSize
-Real Duration      $Duration"
+Logs/s             $RealLogsPerSecond
+Total size         $totalSize
+Duration           $duration"
     exit 0
 }
 
-For ($i = $rangemin; $i -le $rangemax; $i++) {
+For ($i = $rangeMin; $i -le $rangeMax; $i++) {
     If ($action -eq "start") {
         docker start $name$i
+        Write-Output "Container $name$i started"
     }
     ElseIf ($action -eq "stop") {
         docker stop $name$i
+        Write-Output "Container $name$i stopped"
     }
     ElseIf ($action -eq "restart") {
         docker restart $name$i
+        Write-Output "Container $name$i restart"
     }
     ElseIf ($action -eq "rm") {
         docker kill $name$i > $null
@@ -155,7 +161,7 @@ For ($i = $rangemin; $i -le $rangemax; $i++) {
     ElseIf ($action -eq "run") {
         docker kill $name$i > $null
         docker rm $name$i > $null
-        docker run --name $name$i --ip $ip$i -v logs:"c:\logs" -e NAME=$name$i -tid $image
+        docker run --name $name$i --ip $ip$i -v logs:"c:\logs" -e NAME=$name$i -tid $image > $null
         Write-Output "Container $name$i created and running"
     }
     ElseIf ($action -eq "exec") {
@@ -163,7 +169,7 @@ For ($i = $rangemin; $i -le $rangemax; $i++) {
         Write-Output "Command $execCommand injected in container $name$i"
     }
     ElseIf ($action -eq "gen") {
-        docker exec -d $name$i powershell C:\genlog.ps1 $eventApp $nblogs $lps $size
+        docker exec -d $name$i powershell C:\genevent.ps1 $eventApp $logNumber $logPerSecond $logSize
         Write-Output "Generating logs in container $name$i "
     }
 }
