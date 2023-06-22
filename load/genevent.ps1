@@ -5,7 +5,7 @@ if ($args.length -ne 4) {
   Write-Output "Usage: .\genlog.ps1 <AppSource> <NumberOfLogs> <LogsPerSecond> <LogSize>`n
 You may be restricted by the number of logs per second, depending on your OS and disk IO's
 AppSource: any string (ie: MyApp)
-LogsPerSecond: in seconds (if 0 = fast as possible)
+LogsPerSecond: in seconds 
 LogSize: in bytes for each log entry"
   exit 1
 }

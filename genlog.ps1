@@ -7,7 +7,7 @@ $rangeMax = $Args[2]
 $logNumber = $Args[3]
 $logPerSecond = $Args[4]
 $logSize = $Args[5]
-$ip = "172.22.39."
+$ip = "172.0.0."
 $name = "gwl"
 $image = "gwl"
 $eventApp = "MyApp" # If new App, it will create it
@@ -122,6 +122,7 @@ ElseIf ($action -eq "logs") {
     $duration = formatDuration($durationSecs)
 
     Write-Output "=== FAKE LOG REPORT ===
+Number container   " (Get-ChildItem -Path $volume).Count "   
 Logs generated     $LogsGenerated
 Logs/s             $RealLogsPerSecond
 Total size         $totalSize
@@ -148,20 +149,20 @@ For ($i = $rangeMin; $i -le $rangeMax; $i++) {
         Write-Output "Container $name$i killed"
     }
     ElseIf ($action -eq "create") {
-        echo $ip$i
-        docker create --name $name$i --ip $ip$i -v logs:"c:\logs" -e NAME=$name$i -ti $image
+        docker create --name $name$i --ip $ip$i -v logs:"c:\logs" --network gwl -e NAME=$name$i -ti $image
         Write-Output "Container $name$i created"
     }
+
     ElseIf ($action -eq "recreate") {
         docker kill $name$i > $null
         docker rm $name$i > $null
-        docker run --name $name$i --ip $ip$i -v logs:"c:\logs" -e NAME=$name$i -tid $image
+        docker run --name $name$i --ip $ip$i -v logs:"c:\logs" --network gwl -e NAME=$name$i -tid $image
         Write-Output "Container $name$i recreated"
     }
     ElseIf ($action -eq "run") {
         docker kill $name$i > $null
         docker rm $name$i > $null
-        docker run --name $name$i --ip $ip$i -v logs:"c:\logs" -e NAME=$name$i -tid $image > $null
+        docker run --name $name$i --ip $ip$i -v logs:"c:\logs" --network gwl  -e NAME=$name$i -tid $image > $null
         Write-Output "Container $name$i created and running"
     }
     ElseIf ($action -eq "exec") {
@@ -170,7 +171,7 @@ For ($i = $rangeMin; $i -le $rangeMax; $i++) {
     }
     ElseIf ($action -eq "gen") {
         docker exec -d $name$i powershell C:\genevent.ps1 $eventApp $logNumber $logPerSecond $logSize
-        Write-Output "Generating logs in container $name$i "
+        Write-Output "Generating logs in container $name$i"
     }
 }
 if ($action -eq "run" -or $action -eq "create") {
