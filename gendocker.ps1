@@ -15,16 +15,16 @@ $volume = "C:\ProgramData\Docker\volumes\logs\_data"
 
 Function usage {
     Write-Output "
-Usage: .\docker.ps1 <start|stop|restart|create|rm|recreate|run|exec|gen|logs> <rangemin> <rangemax> [<number_of_logs> <logs_per_seconde> <size_of_logs>]
+Usage: .\gendocker.ps1 <start|stop|restart|create|rm|recreate|run|exec|gen|logs> <rangemin> <rangemax> [<number_of_logs> <logs_per_seconde> <size_of_logs>]
 Example: 
-    .\docker.ps1 run 1 20                   Create and start 20 containers
-    .\docker.ps1 gen 1 20 10000 100 100     Generate 10000 logs of 100 bytes at the rate of 100 logs/s on each container
-    .\docker.ps1 logs 1 20                  Wait for the logs to come and report.
+    .\gendocker.ps1 run 1 20                   Create and start 20 containers
+    .\gendocker.ps1 gen 1 20 10000 100 100     Generate 10000 logs of 100 bytes at the rate of 100 logs/s on each container
+    .\gendocker.ps1 logs 1 20                  Wait for the logs to come and report.
     
 Other command:
-    .\docker.ps1 rm 1 20                    Kill and remove containers
-    .\docker.ps1 restart 1 10               Restart the container from 1 to 10
-    .\docker.ps1 exec 5 10 ""echo hello""   Injecting command into container 5 to 10 (background mode)"
+    .\gendocker.ps1 rm 1 20                    Kill and remove containers
+    .\gendocker.ps1 restart 1 10               Restart the container from 1 to 10
+    .\gendocker.ps1 exec 5 10 ""echo hello""   Injecting command into container 5 to 10 (background mode)"
     exit 1
 }
 
@@ -170,7 +170,7 @@ For ($i = $rangeMin; $i -le $rangeMax; $i++) {
         Write-Output "Command $execCommand injected in container $name$i"
     }
     ElseIf ($action -eq "gen") {
-        docker exec -d $name$i powershell C:\genevent.ps1 $eventApp $logNumber $logPerSecond $logSize
+        docker exec -d $name$i powershell C:\genlog.ps1 $eventApp $logNumber $logPerSecond $logSize
         Write-Output "Generating logs in container $name$i"
     }
 }
