@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/windows:ltsc2019
  
 EXPOSE 514
 
-COPY "load\*" "c:\\"
+COPY "genlog.ps1" "c:\\"
 WORKDIR "c:\\"
 SHELL ["powershell", "-command"]
 RUN Set-ExecutionPolicy Unrestricted

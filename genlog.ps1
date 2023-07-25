@@ -44,9 +44,9 @@ function GenerateRandomBytes($logSize) {
 
 CreateSource $AppSource
 # Calculate the time delay between logs in milliseconds
-$delayBetweenLogs = [math]::Round(1000 / $logsPerSecond - 0.001, 3) #0.001 = time to log
+$delayBetweenLogs = [math]::Round(1000 / $logsPerSecond - 0.001, 3) #0.001 = time to log 
 #$delayBetweenLogs = 1000 / $logsPerSecond 
-echo $delayBetweenLogs
+
 $startTime = Get-Date
 Write-Output "Generating..."
 
